@@ -2,7 +2,6 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const fileUpload = require("express-fileupload");
-const fs = require("fs-extra");
 const MongoClient = require("mongodb").MongoClient;
 require("dotenv").config();
 
@@ -35,6 +34,8 @@ client.connect((err) => {
 		});
 	});
 
+	// appointment by date:
+
 	app.post("/appointmentsByDate", (req, res) => {
 		const date = req.body.date;
 		const email = req.body.email;
@@ -53,6 +54,9 @@ client.connect((err) => {
 			}
 		);
 	});
+
+	// check is Doctor:
+
 	app.post("/isDoctor", (req, res) => {
 		const email = req.body.email;
 		DoctorCollection.find({ email: email }).toArray(
@@ -62,49 +66,33 @@ client.connect((err) => {
 		);
 	});
 
-	// client.close();
+	//add doctor:
+
 	app.post("/addDoctor", (req, res) => {
 		const file = req.files.file;
 		const name = req.body.name;
 		const email = req.body.email;
 		const photoName = file.name;
-		const filePath = `${__dirname}/doctors/${file.name}`;
 		console.log(name, email, file);
-		file.mv(filePath, (err) => {
-			if (err) {
-				console.log();
-				return res.status(500).send({
-					msg: "Failed to upload image in the server",
-				});
-			}
 
-			const newImage = fs.readFileSync(filePath);
-			const encodeImage = newImage.toString("base64");
-			const image = {
-				contentType: req.files.file.mimetype,
-				size: req.files.file.size,
-				img: Buffer(encodeImage, "base64"),
-			};
+		const newImage = req.files.file.data;
+		const encodeImage = newImage.toString("base64");
+		const image = {
+			contentType: req.files.file.mimetype,
+			size: req.files.file.size,
+			img: Buffer.from(encodeImage, "base64"),
+		};
 
-			DoctorCollection.insertOne({
-				name,
-				email,
-				image,
-			}).then((result) => {
-				fs.remove(filePath, (err) => {
-					if (err) {
-						console.log(err);
-						return res.status(500).send({
-							msg:
-								"Failed to upload image in the server",
-						});
-					}
-				});
-				console.log(result);
-			});
+		DoctorCollection.insertOne({
+			name,
+			email,
+			image,
+		}).then((result) => {
+			console.log(result);
 		});
 	});
 
+	// Get Doctors
 	app.get("/doctors", (req, res) => {
 		DoctorCollection.find({}).toArray((err, documents) => {
 			res.send(documents);
